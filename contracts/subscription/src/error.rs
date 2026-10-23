@@ -47,4 +47,6 @@ pub enum Error {
     /// upgrade: the mandate's merchant decides who is paid and who may
     /// refund.
     DifferentMerchant = 17,
+    /// The estimated end timestamp for a mandate's remaining schedule overflows `u64`.
+    ScheduleOverflow = 18,
 }

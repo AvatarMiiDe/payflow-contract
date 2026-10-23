@@ -853,6 +853,38 @@ mod contract {
             Self::read_mandate(&env, mandate_id)
         }
 
+        /// Estimate when the mandate's final capped charge is scheduled.
+        ///
+        /// The estimate follows the current schedule, including any drift from
+        /// late charges. Returns `None` for an open-ended mandate and its actual
+        /// final charge time once the cap has been reached.
+        ///
+        /// # Errors
+        /// Returns [`Error::MandateNotFound`] if the mandate does not exist, or
+        /// [`Error::ScheduleOverflow`] if the remaining schedule overflows `u64`.
+        pub fn estimated_end(env: Env, mandate_id: u64) -> Result<Option<u64>, Error> {
+            let mandate = Self::read_mandate(&env, mandate_id)?;
+            if mandate.max_charges == 0 {
+                return Ok(None);
+            }
+
+            let remaining_charges = mandate.max_charges.saturating_sub(mandate.charges_made);
+            if remaining_charges == 0 {
+                return Ok(Some(mandate.last_charge));
+            }
+
+            let remaining_periods = u64::from(remaining_charges - 1);
+            let offset = remaining_periods
+                .checked_mul(mandate.period)
+                .ok_or(Error::ScheduleOverflow)?;
+            let estimated_end = mandate
+                .next_charge
+                .checked_add(offset)
+                .ok_or(Error::ScheduleOverflow)?;
+
+            Ok(Some(estimated_end))
+        }
+
         /// True when `charge` would succeed on timing and status grounds. Does not
         /// check vault balance; a funded-ness check is the caller's job.
         pub fn is_due(env: Env, mandate_id: u64) -> Result<bool, Error> {
