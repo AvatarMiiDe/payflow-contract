@@ -185,16 +185,12 @@ fn estimated_end_tracks_the_schedule_after_a_late_charge() {
 
     w.sub.charge(&w.keeper, &id);
     let first_next_charge = w.sub.get_mandate(&id).next_charge;
-    w.env.ledger()
-        .set_timestamp(first_next_charge + 2 * MONTH);
+    w.env.ledger().set_timestamp(first_next_charge + 2 * MONTH);
     w.sub.charge(&w.keeper, &id);
 
     let mandate = w.sub.get_mandate(&id);
     assert_eq!(mandate.next_charge, w.env.ledger().timestamp() + MONTH);
-    assert_eq!(
-        w.sub.estimated_end(&id),
-        Some(mandate.next_charge + MONTH)
-    );
+    assert_eq!(w.sub.estimated_end(&id), Some(mandate.next_charge + MONTH));
 
     w.env.ledger().set_timestamp(mandate.next_charge);
     w.sub.charge(&w.keeper, &id);
